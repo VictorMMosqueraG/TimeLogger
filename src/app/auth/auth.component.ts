@@ -8,8 +8,8 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AsyncPipe, NgIf } from '@angular/common';
 import { Router } from '@angular/router';
-import { Messages } from '../commods/message';
-import { AppRoutes } from '../commods/appRoutes';
+import { Messages } from '../commonds/message';
+import { AppRoutes } from '../commonds/appRoutes';
 import { AuthService } from '../services/auth.service';
 import { AuthCredentials } from '../models/Auth.Model';
 
