@@ -12,6 +12,7 @@ import {
 } from '@angular/fire/auth';
 import { FormsModule } from '@angular/forms';
 import { AsyncPipe, NgIf } from '@angular/common';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-auth',
@@ -30,7 +31,10 @@ export class AuthComponent {
   loginError: string | null = null;//Control de errores
   user$: Observable<User | null>;//Observable que obtiene el user
 
-  constructor(private auth: Auth) {
+  constructor(
+    private auth: Auth,
+    private router: Router
+  ) {
     this.user$ = authState(this.auth);
   }
 
@@ -54,6 +58,7 @@ export class AuthComponent {
     this.loginError = null;
     try {
       await signInWithEmailAndPassword(this.auth, this.email, this.password);
+      this.router.navigate(['/timeLogger']);
     } catch (err: any) {
       this.loginError = "Credenciales Invalidas. Porfavor intentelo nuevamente";//COMEBACK: revisar como no hardcodear esto
     }
@@ -66,6 +71,7 @@ export class AuthComponent {
   //  */
   async ingresarConGoogle() {
     await signInWithPopup(this.auth, new GoogleAuthProvider());
+    this.router.navigate(['/timeLogger']);
   }
 
   //***
