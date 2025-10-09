@@ -3,16 +3,15 @@ import { Observable } from 'rxjs';
 import {
   Auth,
   authState,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
   User,
 } from '@angular/fire/auth';
 import { FormsModule } from '@angular/forms';
 import { AsyncPipe, NgIf } from '@angular/common';
 import { Router } from '@angular/router';
+import { Messages } from '../commods/message';
+import { AppRoutes } from '../commods/appRoutes';
+import { AuthService } from '../services/auth.service';
+import { AuthCredentials } from '../models/Auth.Model';
 
 @Component({
   selector: 'app-auth',
@@ -24,8 +23,7 @@ import { Router } from '@angular/router';
 export class AuthComponent {
 
   //Propiedades para los campos
-  email = '';
-  password = '';
+  credentials: AuthCredentials = { email: '', password: '' };
 
   registered = false;// Flag
   loginError: string | null = null;//Control de errores
@@ -33,7 +31,8 @@ export class AuthComponent {
 
   constructor(
     private auth: Auth,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.user$ = authState(this.auth);
   }
@@ -43,10 +42,15 @@ export class AuthComponent {
   // con la opcion del "crear cuenta"
   //  */
   async registrar() {
-    await createUserWithEmailAndPassword(this.auth, this.email, this.password);
-    await signOut(this.auth);
+    await this.authService.registrar(
+      this.credentials.email ,
+      this.credentials.password);
+
+    await this.salir();// Cierra sesion
+
+    //setea values
     this.registered = true;
-    this.password = '';
+    this.credentials.password = '';
   }
 
   //***
@@ -57,10 +61,15 @@ export class AuthComponent {
   async ingresar() {
     this.loginError = null;
     try {
-      await signInWithEmailAndPassword(this.auth, this.email, this.password);
-      this.router.navigate(['/timeLogger']);
+      await this.authService.ingresar(
+        this.credentials.email ,
+        this.credentials.password);
+
+      this.router
+        .navigate([AppRoutes.TIME_LOGGER]);
     } catch (err: any) {
-      this.loginError = "Credenciales Invalidas. Porfavor intentelo nuevamente";//COMEBACK: revisar como no hardcodear esto
+      this.loginError =
+        Messages.INVALID_CREDENTIALS;//COMEBACK: revisar como no hardcodear esto
     }
   }
 
@@ -70,8 +79,8 @@ export class AuthComponent {
   // para crear cuenta e ingresar
   //  */
   async ingresarConGoogle() {
-    await signInWithPopup(this.auth, new GoogleAuthProvider());
-    this.router.navigate(['/timeLogger']);
+    await this.authService.ingresarConGoogle();
+    this.router.navigate([AppRoutes.TIME_LOGGER]);
   }
 
   //***
@@ -79,9 +88,11 @@ export class AuthComponent {
   // y cierra la sesion
   //  */
   async salir() {
-    await signOut(this.auth);
-    this.email = '';
-    this.password = '';
+    await this.authService.salir();//cierra sesion
+
+    //Seta values
+    this.credentials.email = '',
+    this.credentials.password  = ''
   }
 
 
