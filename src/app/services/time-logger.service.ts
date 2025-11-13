@@ -1,56 +1,32 @@
 import { Injectable } from '@angular/core';
-import {
-  Firestore,
-  collection,
-  collectionData,
-  addDoc,
-  deleteDoc,
-  doc,
-  updateDoc,
-  CollectionReference,
-  DocumentData
-} from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { TimeLogger } from '../models/TimeLogger.Model';
-import { Colecciones } from '../../environments/coleccion';
+import { HttpClient } from '@angular/common/http';
 
 
 @Injectable({ providedIn: 'root' })
 export class TimeLoggerService {
-  // Referencia tipada a la colección 'horas' en Firestore
-  private horasRef: CollectionReference<DocumentData>;
+  private readonly apiUrl = 'http://localhost:8000/api/hours'; // tu backend PHP
 
-  constructor(private firestore: Firestore) {
-    this.horasRef = collection(this.firestore, Colecciones.horas);
-  }
+  constructor(private http: HttpClient) {}
 
-  /**
-   * Obtiene todos los registros de la colección como un Observable.
-   */
+  /** Obtener todos los registros */
   getRegistros(): Observable<TimeLogger[]> {
-    return collectionData(this.horasRef, { idField: 'id' }) as Observable<TimeLogger[]>;
+    return this.http.get<TimeLogger[]>(this.apiUrl);
   }
 
-  /**
-   * Agrega un nuevo registro a Firestore.
-   */
-  agregarRegistro(registro: TimeLogger) {
-    return addDoc(this.horasRef, registro as any);
+  /** Crear nuevo registro */
+  agregarRegistro(registro: TimeLogger): Observable<any> {
+    return this.http.post<any>(this.apiUrl, registro);
   }
 
-  /**
-   * Actualiza un registro existente en Firestore dada su id.
-   */
-  actualizarRegistro(id: string, registro: TimeLogger) {
-    const ref = doc(this.firestore, `${Colecciones.horas}/${id}`);
-    return updateDoc(ref, registro as any);
+  /** Actualizar registro */
+  actualizarRegistro(id: number, registro: TimeLogger): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}`, registro);
   }
 
-  /**
-   * Elimina un registro de la colección en Firestore.
-   */
-  eliminarRegistro(id: string) {
-    const ref = doc(this.firestore, `${Colecciones.horas}/${id}`);
-    return deleteDoc(ref);
+  /** Eliminar registro */
+  eliminarRegistro(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 }

@@ -8,6 +8,7 @@ import { routes } from './app/app.routes';
 import { provideHttpClient } from '@angular/common/http';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 
+
 bootstrapApplication(AppComponent, {
   providers: [
     provideHttpClient(),

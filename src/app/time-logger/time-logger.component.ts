@@ -17,28 +17,25 @@ import { Messages } from '../commonds/message';
   styleUrl: './time-logger.component.css'
 })
 export class TimeLoggerComponent {
-
   registro: TimeLogger = this.blankRegistro();
-  editandoId: string | null = null;
+  editandoId: number | null = null;
   horas$: Observable<TimeLogger[]>;
 
-  ingresoTotal: number = 0;
-  horasTotales: number = 0;
-  promedioTarifa: number = 0;
+  ingresoTotal = 0;
+  horasTotales = 0;
+  promedioTarifa = 0;
 
   constructor(
     private timeLoggerService: TimeLoggerService,
     private authService: AuthService,
     private router: Router
   ) {
-    // Se obtiene el observable de registros desde el servicio
     this.horas$ = this.timeLoggerService.getRegistros();
-    // Cada vez que cambia la lista de registros (alta, baja, edición), se recalculan las estadísticas
     this.horas$.subscribe(registros => this.calculaStats(registros));
   }
 
   /**
-   * Limpia el formulario
+   * Devuelve un objeto vacío base para el formulario.
    */
   blankRegistro(): TimeLogger {
     return {
@@ -53,59 +50,74 @@ export class TimeLoggerComponent {
   }
 
   /**
-   * Agrega un nuevo registro o actualiza uno existente si editandoId es diferente de null.
-   * Primero valida los campos requeridos, calcula el ingreso y luego persiste en Firestore usando el servicio.
+   * Crea o actualiza un registro según si existe editandoId.
    */
-  async guardarRegistro() {
+  guardarRegistro(): void {
     const r = this.registro;
 
     if (!r.cliente.trim() || !r.proyecto.trim() || !r.fecha.trim() || r.horas <= 0 || r.tarifaHora <= 0) {
-      return alert(Messages.INVALID_VALUES);
+      alert(Messages.INVALID_VALUES);
+      return;
     }
 
     r.ingreso = r.horas * r.tarifaHora;
+    r.uid = 'uid-demo'; // valor simulado por ahora
 
     if (this.editandoId) {
-      await this.timeLoggerService.actualizarRegistro(this.editandoId, r);
-      this.editandoId = null;
+      this.timeLoggerService.actualizarRegistro(this.editandoId, r).subscribe({
+        next: () => this.recargar(),
+        error: err => alert('Error al actualizar: ' + err.message)
+      });
     } else {
-      r.uid = 'uid-demo';
-      await this.timeLoggerService.agregarRegistro(r);
+      this.timeLoggerService.agregarRegistro(r).subscribe({
+        next: () => this.recargar(),
+        error: err => alert('Error al guardar: ' + err.message)
+      });
     }
+
     this.registro = this.blankRegistro();
+    this.editandoId = null;
   }
 
   /**
-   * Solicita al servicio eliminar un registro por su id
-   * @param id - id del registro en Firestore
+   * Elimina un registro por ID.
    */
-  async eliminarRegistro(id: string) {
-    await this.timeLoggerService.eliminarRegistro(id);
+  eliminarRegistro(id: number): void {
+    if (confirm('¿Seguro que deseas eliminar este registro?')) {
+      this.timeLoggerService.eliminarRegistro(id).subscribe({
+        next: () => this.recargar(),
+        error: err => alert('Error al eliminar: ' + err.message)
+      });
+    }
   }
 
   /**
-   * Prepara el formulario para editar un registro existente
-   * Copia los datos y almacena el id del registro a editar
-   * @param registro - Objeto con los datos actuales
+   * Copia un registro al formulario para edición.
    */
-  editarRegistro(registro: TimeLogger) {
-    this.editandoId = registro.id || null;
+  editarRegistro(registro: TimeLogger): void {
+    this.editandoId = registro.id ? Number(registro.id) : null;
     this.registro = { ...registro };
   }
 
   /**
-   * Recalcula las estadísticas globales (ingreso total, horas totales, tarifa promedio)
-   * cada vez que cambia la lista de registros
-   * @param registros - Array con todos los TimeLogger actuales
+   * Recalcula totales (ingreso, horas y tarifa promedio).
    */
-  calculaStats(registros: TimeLogger[]) {
-    this.ingresoTotal = registros.reduce((a, r) => a + r.ingreso, 0);
-    this.horasTotales = registros.reduce((a, r) => a + r.horas, 0);
+  calculaStats(registros: TimeLogger[]): void {
+    this.ingresoTotal = registros.reduce((a, r) => a + (r.ingreso || 0), 0);
+    this.horasTotales = registros.reduce((a, r) => a + (r.horas || 0), 0);
     this.promedioTarifa = this.horasTotales ? this.ingresoTotal / this.horasTotales : 0;
   }
 
   /**
-   * Cierra la sesión del usuario y lo redirige al login
+   * Recarga la lista de registros desde el backend.
+   */
+  private recargar(): void {
+    this.horas$ = this.timeLoggerService.getRegistros();
+    this.horas$.subscribe(registros => this.calculaStats(registros));
+  }
+
+  /**
+   * Cierra la sesión.
    */
   async cerrarSesion() {
     await this.authService.salir();
