@@ -18,7 +18,8 @@ import { Messages } from '../commonds/message';
 })
 export class TimeLoggerComponent {
   registro: TimeLogger = this.blankRegistro();
-  editandoId: number | null = null;
+  // keep id as string | null — backend returns id as string
+  editandoId: string | null = null;
   horas$: Observable<TimeLogger[]>;
 
   ingresoTotal = 0;
@@ -34,9 +35,6 @@ export class TimeLoggerComponent {
     this.horas$.subscribe(registros => this.calculaStats(registros));
   }
 
-  /**
-   * Devuelve un objeto vacío base para el formulario.
-   */
   blankRegistro(): TimeLogger {
     return {
       cliente: '',
@@ -49,19 +47,25 @@ export class TimeLoggerComponent {
     };
   }
 
-  /**
-   * Crea o actualiza un registro según si existe editandoId.
-   */
+  private isValidId(id: any): boolean {
+    if (id == null) return false;
+    // numeric single integer or numeric string
+    const asNumber = Number(id);
+    if (!Number.isNaN(asNumber) && Number.isInteger(asNumber) && asNumber > 0) return true;
+    // Mongo ObjectId 24 hex chars
+    if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) return true;
+    return false;
+  }
+
   guardarRegistro(): void {
     const r = this.registro;
-
     if (!r.cliente.trim() || !r.proyecto.trim() || !r.fecha.trim() || r.horas <= 0 || r.tarifaHora <= 0) {
       alert(Messages.INVALID_VALUES);
       return;
     }
 
     r.ingreso = r.horas * r.tarifaHora;
-    r.uid = 'uid-demo'; // valor simulado por ahora
+    r.uid = 'uid-demo';
 
     if (this.editandoId) {
       this.timeLoggerService.actualizarRegistro(this.editandoId, r).subscribe({
@@ -79,46 +83,37 @@ export class TimeLoggerComponent {
     this.editandoId = null;
   }
 
-  /**
-   * Elimina un registro por ID.
-   */
-  eliminarRegistro(id: number): void {
+  eliminarRegistro(id: string | number | undefined): void {
+    console.log('Eliminar id recibido:', id, typeof id);
+    if (!this.isValidId(id)) {
+      alert('Id inválido — no se realiza la petición (evita NaN).');
+      return;
+    }
     if (confirm('¿Seguro que deseas eliminar este registro?')) {
-      this.timeLoggerService.eliminarRegistro(id).subscribe({
+      this.timeLoggerService.eliminarRegistro(String(id)).subscribe({
         next: () => this.recargar(),
         error: err => alert('Error al eliminar: ' + err.message)
       });
     }
   }
 
-  /**
-   * Copia un registro al formulario para edición.
-   */
   editarRegistro(registro: TimeLogger): void {
-    this.editandoId = registro.id ? Number(registro.id) : null;
+    // keep id as string — don't convert with Number()
+    this.editandoId = registro.id ?? null;
     this.registro = { ...registro };
   }
 
-  /**
-   * Recalcula totales (ingreso, horas y tarifa promedio).
-   */
   calculaStats(registros: TimeLogger[]): void {
     this.ingresoTotal = registros.reduce((a, r) => a + (r.ingreso || 0), 0);
     this.horasTotales = registros.reduce((a, r) => a + (r.horas || 0), 0);
     this.promedioTarifa = this.horasTotales ? this.ingresoTotal / this.horasTotales : 0;
   }
 
-  /**
-   * Recarga la lista de registros desde el backend.
-   */
   private recargar(): void {
     this.horas$ = this.timeLoggerService.getRegistros();
     this.horas$.subscribe(registros => this.calculaStats(registros));
   }
 
-  /**
-   * Cierra la sesión.
-   */
   async cerrarSesion() {
     await this.authService.salir();
     this.router.navigate([AppRoutes.LOGIN]);
