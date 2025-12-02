@@ -48,10 +48,8 @@ export class TimeLoggerComponent {
 
   private isValidId(id: any): boolean {
     if (id == null) return false;
-    // numeric single integer or numeric string
     const asNumber = Number(id);
     if (!Number.isNaN(asNumber) && Number.isInteger(asNumber) && asNumber > 0) return true;
-    // Mongo ObjectId 24 hex chars
     if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) return true;
     return false;
   }
@@ -97,7 +95,6 @@ export class TimeLoggerComponent {
   }
 
   editarRegistro(registro: TimeLogger): void {
-    // keep id as string — don't convert with Number()
     this.editandoId = registro.id ?? null;
     this.registro = { ...registro };
   }
