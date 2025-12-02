@@ -18,7 +18,6 @@ import { Messages } from '../commonds/message';
 })
 export class TimeLoggerComponent {
   registro: TimeLogger = this.blankRegistro();
-  // keep id as string | null — backend returns id as string
   editandoId: string | null = null;
   horas$: Observable<TimeLogger[]>;
 
